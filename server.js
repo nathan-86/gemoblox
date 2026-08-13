@@ -11,20 +11,28 @@ app.post('/generate', async (req, res) => {
     try {
         const { prompt } = req.body;
         
-        const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-            {
-                contents: [{ parts: [{ text: `You are a Roblox Lua coding assistant. Return ONLY raw valid Lua code without markdown block quotes or explanations. Prompt: ${prompt}` }] }]
-            }
-        );
+        // Update URL model Gemini di sini:
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        
+        const response = await axios.post(url, {
+            contents: [{ 
+                parts: [{ 
+                    text: `You are a Roblox Lua coding assistant. Return ONLY valid Lua code without markdown block quotes or extra text. Prompt: ${prompt}` 
+                }] 
+            }]
+        });
 
         const aiResponse = response.data.candidates[0].content.parts[0].text;
         res.json({ success: true, result: aiResponse });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        // Biar keliatan error resminya di log Studio
+        console.error("Gemini Error:", error.response ? error.response.data : error.message);
+        res.status(500).json({ 
+            success: false, 
+            error: error.response ? JSON.stringify(error.response.data) : error.message 
+        });
     }
 });
 
-// Pake process.env.PORT biar gak error di Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Proxy jalan di port ${PORT}`));
