@@ -1,36 +1,29 @@
 require('dotenv').config();
 const express = require('express');
-const axios = require('axios');
-const app = express();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+const app = express();
 app.use(express.json());
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/generate', async (req, res) => {
     try {
         const { prompt } = req.body;
         
-        // Update URL model Gemini di sini:
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // Pake model 1.5-flash via SDK resmi
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         
-        const response = await axios.post(url, {
-            contents: [{ 
-                parts: [{ 
-                    text: `You are a Roblox Lua coding assistant. Return ONLY valid Lua code without markdown block quotes or extra text. Prompt: ${prompt}` 
-                }] 
-            }]
-        });
+        const fullPrompt = `You are a Roblox Lua coding assistant. Return ONLY valid Lua code without markdown block quotes or extra text. Prompt: ${prompt}`;
+        
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        const text = response.text();
 
-        const aiResponse = response.data.candidates[0].content.parts[0].text;
-        res.json({ success: true, result: aiResponse });
+        res.json({ success: true, result: text });
     } catch (error) {
-        // Biar keliatan error resminya di log Studio
-        console.error("Gemini Error:", error.response ? error.response.data : error.message);
-        res.status(500).json({ 
-            success: false, 
-            error: error.response ? JSON.stringify(error.response.data) : error.message 
-        });
+        console.error("Gemini Error:", error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
